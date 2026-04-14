@@ -38,9 +38,26 @@
 - [x] Gradient buttons with amber glow shadows
 - [x] Risk zone color mapping (Conflict-Affected, Stable/Urban, etc.)
 - [x] LinearGradient for banners and CTAs
-- [ ] Animated counters on KPI cards (web has these)
+- [x] Animated counters on KPI cards
 - [ ] Sparkline mini-charts on KPI cards
 - [ ] Floating particle effects on auth screens
+
+## Phase 3.5: Design System (Pro UI/UX Upgrade)
+
+- [x] `constants/Tokens.ts` — spacing, typography, radius, elevation, semantic colors
+- [x] Reusable `<Card>` component with elevation levels (L1-L4), accent colors, onPress animations
+- [x] Reusable `<Text>` component with typography variants (h1-h4, body, label, caption, overline, numLg, etc.)
+- [x] Reusable `<Badge>` component (filled/subtle variants)
+- [x] Reusable `<Button>` component (primary gradient / secondary / ghost / danger)
+- [x] Reusable `<Skeleton>` loaders (SkeletonKPI, SkeletonRow)
+- [x] Reusable `<EmptyState>` with icon + title + description + CTA
+- [x] Reusable `<AnimatedCounter>` with ease-out cubic
+- [x] Reusable `<FadeInView>` for entrance animations
+- [x] Haptic feedback on all interactive elements (expo-haptics)
+- [x] WCAG-compliant text contrast (tertiary bumped to #9ca3af = 4.6:1)
+- [x] 44pt minimum touch targets on all buttons/pills/tabs
+- [x] All 7 tab screens refactored to use token system
+- [x] Both auth screens refactored to use token system
 
 ## Phase 4: Data & API Integration
 

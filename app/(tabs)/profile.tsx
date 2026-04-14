@@ -1,20 +1,22 @@
 import React from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useAuth } from '@/lib/auth-context';
+import { spacing, radius, background, brand, elevation, textColor, semantic } from '@/constants/Tokens';
+import { Text, Button } from '@/components/ui';
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
 
   const handleSignOut = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Sign Out', style: 'destructive', onPress: signOut },
@@ -27,17 +29,21 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={styles.container}>
       {/* Avatar banner */}
-      <LinearGradient colors={['#f4b942', '#d4952a']} style={styles.avatarSection}>
+      <LinearGradient colors={[brand.amberLight, brand.amber, brand.amberDark]} style={styles.avatarSection}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initial}</Text>
+          <Text variant="display" color="#fff">{initial}</Text>
         </View>
-        <Text style={styles.displayName}>{user?.displayName || 'HUMAID User'}</Text>
-        <Text style={styles.email}>{user?.email || 'Not signed in'}</Text>
+        <Text variant="h2" color="#fff" style={{ marginTop: spacing.md }}>
+          {user?.displayName || 'HUMAID User'}
+        </Text>
+        <Text variant="bodySm" color="rgba(255,255,255,0.8)" style={{ marginTop: spacing.xs }}>
+          {user?.email || 'Not signed in'}
+        </Text>
       </LinearGradient>
 
-      {/* Account info */}
+      {/* Account section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account</Text>
+        <Text variant="label" color="tertiary" style={styles.sectionTitle}>ACCOUNT</Text>
         <View style={styles.infoCard}>
           <InfoRow icon="envelope-o" label="Email" value={user?.email || '--'} />
           <InfoRow icon="user-o" label="Name" value={user?.displayName || 'Not set'} />
@@ -46,8 +52,9 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {/* About section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About</Text>
+        <Text variant="label" color="tertiary" style={styles.sectionTitle}>ABOUT</Text>
         <View style={styles.infoCard}>
           <InfoRow icon="info-circle" label="App" value="HUMAID Mobile v1.0.0" />
           <InfoRow icon="database" label="Platform" value="BAY States Intelligence" />
@@ -55,12 +62,18 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
-        <FontAwesome name="sign-out" size={18} color="#ef4444" />
-        <Text style={styles.signOutText}>Sign Out</Text>
-      </TouchableOpacity>
+      {/* Sign out */}
+      <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.xxl }}>
+        <Button
+          label="Sign Out"
+          onPress={handleSignOut}
+          variant="danger"
+          fullWidth
+          icon={<FontAwesome name="sign-out" size={16} color={semantic.danger} />}
+        />
+      </View>
 
-      <View style={{ height: 40 }} />
+      <View style={{ height: spacing.huge * 1.5 }} />
     </ScrollView>
   );
 }
@@ -72,51 +85,45 @@ function InfoRow({ icon, label, value, last }: {
   last?: boolean;
 }) {
   return (
-    <View style={[rowStyles.row, !last && rowStyles.border]}>
-      <FontAwesome name={icon} size={15} color="#64748b" style={rowStyles.icon} />
-      <Text style={rowStyles.label}>{label}</Text>
-      <Text style={rowStyles.value} numberOfLines={1}>{value}</Text>
+    <View style={[styles.row, !last && styles.rowBorder]}>
+      <FontAwesome name={icon} size={15} color={textColor.tertiary} style={{ width: 24 }} />
+      <Text variant="bodySm" color="tertiary" style={{ width: 90 }}>{label}</Text>
+      <Text variant="bodySm" color="primary" weight="500" style={{ flex: 1, textAlign: 'right' }} numberOfLines={1}>
+        {value}
+      </Text>
     </View>
   );
 }
 
-const rowStyles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16 },
-  border: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
-  icon: { width: 24 },
-  label: { color: '#94a3b8', fontSize: 14, width: 90 },
-  value: { color: '#f5f5f5', fontSize: 14, fontWeight: '500', flex: 1, textAlign: 'right' },
-});
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0a0f' },
+  container: { flex: 1, backgroundColor: background.primary },
 
   avatarSection: {
-    alignItems: 'center', paddingVertical: 36, paddingTop: 60,
-    borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
+    alignItems: 'center',
+    paddingVertical: spacing.xxxl,
+    paddingTop: 72,
+    borderBottomLeftRadius: radius.xxl,
+    borderBottomRightRadius: radius.xxl,
   },
   avatar: {
-    width: 72, height: 72, borderRadius: 36,
+    width: 84, height: 84, borderRadius: 42,
     backgroundColor: 'rgba(255,255,255,0.25)',
     justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)',
   },
-  avatarText: { color: '#fff', fontSize: 28, fontWeight: '800' },
-  displayName: { color: '#fff', fontSize: 20, fontWeight: '700', marginTop: 12 },
-  email: { color: 'rgba(255,255,255,0.8)', fontSize: 14, marginTop: 4 },
 
-  section: { marginTop: 24, paddingHorizontal: 16 },
-  sectionTitle: { color: '#f5f5f5', fontSize: 16, fontWeight: '700', marginBottom: 10 },
+  section: { marginTop: spacing.xxl, paddingHorizontal: spacing.lg },
+  sectionTitle: { marginBottom: spacing.sm, letterSpacing: 1 },
+
   infoCard: {
-    borderRadius: 12, overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    ...elevation.L2,
   },
-
-  signOutBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    marginHorizontal: 16, marginTop: 32, padding: 16,
-    borderRadius: 12, borderWidth: 1.5, borderColor: '#ef4444',
-    gap: 8,
+  row: {
+    flexDirection: 'row', alignItems: 'center',
+    minHeight: 48,
+    paddingVertical: spacing.md, paddingHorizontal: spacing.lg,
   },
-  signOutText: { color: '#ef4444', fontSize: 16, fontWeight: '700' },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
 });

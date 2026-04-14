@@ -1,16 +1,17 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Share,
-  ActivityIndicator,
   RefreshControl,
+  Pressable,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { api, computeSummary, filterByState, avgIndicator, fmt } from '@/lib/api';
 import { MasterRow } from '@/lib/api-types';
+import { spacing, radius, background, semantic, brand } from '@/constants/Tokens';
+import { Card, Text, Badge, Button, SkeletonRow } from '@/components/ui';
 
 interface PolicyBrief {
   id: string;
@@ -22,7 +23,11 @@ interface PolicyBrief {
   recommendations: string[];
 }
 
-const sevColors = { critical: '#ef4444', high: '#f59e0b', medium: '#6ec6e8' };
+const sevColors = {
+  critical: semantic.danger,
+  high: semantic.warning,
+  medium: semantic.info,
+};
 
 export default function BriefsScreen() {
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -42,13 +47,10 @@ export default function BriefsScreen() {
 
   useEffect(() => { fetchData(); }, []);
 
-  // Compute live values for briefs (same as web app)
   const briefs = useMemo<PolicyBrief[]>(() => {
     const borno = computeSummary(filterByState(allRows, 'Borno'));
-    const adamawa = computeSummary(filterByState(allRows, 'Adamawa'));
     const yobe = computeSummary(filterByState(allRows, 'Yobe'));
     const all = computeSummary(allRows);
-
     const bornoUnemp = avgIndicator(filterByState(allRows, 'Borno'), 'Unemployment Rate');
     const bayUnemp = avgIndicator(allRows, 'Unemployment Rate');
     const yobeUnemp = avgIndicator(filterByState(allRows, 'Yobe'), 'Unemployment Rate');
@@ -59,11 +61,11 @@ export default function BriefsScreen() {
         title: 'Borno State Crisis Response',
         severity: 'critical',
         status: 'Published',
-        summary: `Comprehensive analysis of the ongoing humanitarian crisis in Borno State, covering ${borno.totalLGAs} LGAs with ${fmt(borno.totalDisplacement)} displaced persons and ${fmt(borno.totalConflict)} conflict incidents.`,
+        summary: `Comprehensive analysis covering ${borno.totalLGAs} LGAs with ${fmt(borno.totalDisplacement)} displaced persons and ${fmt(borno.totalConflict)} conflict incidents.`,
         keyPoints: [
           `${fmt(borno.totalDisplacement)} internally displaced persons across ${borno.totalLGAs} LGAs`,
           `${fmt(borno.totalConflict)} conflict incidents concentrated in high-risk zones`,
-          `Average literacy rate at ${borno.avgLiteracy.toFixed(1)}%, unemployment at ${bornoUnemp.toFixed(1)}%`,
+          `Literacy at ${borno.avgLiteracy.toFixed(1)}%, unemployment at ${bornoUnemp.toFixed(1)}%`,
           `${fmt(borno.totalSMEs)} SMEs registered — economic recovery underway`,
         ],
         recommendations: [
@@ -78,7 +80,7 @@ export default function BriefsScreen() {
         title: 'Youth Development Strategy — BAY States',
         severity: 'high',
         status: 'Published',
-        summary: `Strategic framework for youth empowerment across ${all.totalLGAs} LGAs in the BAY states, addressing ${bayUnemp.toFixed(1)}% average unemployment and ${fmt(all.totalSMEs)} registered SMEs.`,
+        summary: `Framework for youth empowerment across ${all.totalLGAs} LGAs with ${bayUnemp.toFixed(1)}% average unemployment and ${fmt(all.totalSMEs)} registered SMEs.`,
         keyPoints: [
           `Average youth unemployment at ${bayUnemp.toFixed(1)}% across BAY states`,
           `Total SMEs: ${fmt(all.totalSMEs)} — growth potential in stable zones`,
@@ -87,9 +89,9 @@ export default function BriefsScreen() {
         ],
         recommendations: [
           'Scale vocational training centers in each LGA',
-          'Launch digital skills initiative targeting rural communities',
+          'Launch digital skills initiative in rural areas',
           'Create youth enterprise fund with micro-loan access',
-          'Partner with private sector for apprenticeship programs',
+          'Partner with private sector for apprenticeships',
         ],
       },
       {
@@ -97,129 +99,123 @@ export default function BriefsScreen() {
         title: 'Education Gap Analysis — Yobe Focus',
         severity: 'medium',
         status: 'Published',
-        summary: `Assessment of educational disparities in Yobe State across ${yobe.totalLGAs} LGAs, with literacy at ${yobe.avgLiteracy.toFixed(1)}% and unemployment at ${yobeUnemp.toFixed(1)}%.`,
+        summary: `Assessment across ${yobe.totalLGAs} LGAs with literacy at ${yobe.avgLiteracy.toFixed(1)}% and unemployment at ${yobeUnemp.toFixed(1)}%.`,
         keyPoints: [
           `Literacy rate at ${yobe.avgLiteracy.toFixed(1)}% across ${yobe.totalLGAs} LGAs`,
           `${fmt(yobe.totalDisplacement)} displaced persons affecting school access`,
           `${fmt(yobe.totalConflict)} conflict incidents impacting infrastructure`,
-          `Unemployment at ${yobeUnemp.toFixed(1)}% — highest among BAY youth`,
+          `Unemployment at ${yobeUnemp.toFixed(1)}%`,
         ],
         recommendations: [
-          'Prioritize school reconstruction in conflict-affected areas',
-          'Implement community-based education for displaced children',
-          'Increase teacher recruitment with conflict-zone incentives',
-          'Deploy mobile learning solutions for remote communities',
+          'Prioritize school reconstruction in conflict areas',
+          'Community-based education for displaced children',
+          'Increase teacher recruitment with incentives',
+          'Deploy mobile learning solutions remotely',
         ],
       },
     ];
   }, [allRows]);
 
   const handleShare = async (brief: PolicyBrief) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     try {
       await Share.share({
         title: brief.title,
-        message: `${brief.title}\n\n${brief.summary}\n\nKey Points:\n${brief.keyPoints.map(p => `- ${p}`).join('\n')}\n\nRecommendations:\n${brief.recommendations.map(r => `- ${r}`).join('\n')}\n\n-- HUMAID BAY States Intelligence`,
+        message: `${brief.title}\n\n${brief.summary}\n\nKey Points:\n${brief.keyPoints.map(p => `• ${p}`).join('\n')}\n\nRecommendations:\n${brief.recommendations.map(r => `→ ${r}`).join('\n')}\n\n— HUMAID BAY States Intelligence`,
       });
     } catch {}
   };
 
-  if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#f4b942" /></View>;
-  }
+  const handleExpand = (id: string) => {
+    Haptics.selectionAsync().catch(() => {});
+    setExpanded(expanded === id ? null : id);
+  };
 
   return (
     <ScrollView
       style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor="#f4b942" />}>
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor={brand.amber} />}>
 
-      <Text style={styles.intro}>
-        Auto-generated policy recommendations based on {allRows.length} data points across the BAY States.
+      <Text variant="bodySm" color="tertiary" style={styles.intro}>
+        Auto-generated policy recommendations based on {loading ? '...' : allRows.length} data points across the BAY States.
       </Text>
 
-      {briefs.map((brief) => {
-        const isExp = expanded === brief.id;
-        const sc = sevColors[brief.severity];
+      {loading ? (
+        [1, 2, 3].map((i) => <SkeletonRow key={i} />)
+      ) : (
+        briefs.map((brief) => {
+          const isExp = expanded === brief.id;
+          const sc = sevColors[brief.severity];
 
-        return (
-          <TouchableOpacity
-            key={brief.id}
-            activeOpacity={0.8}
-            onPress={() => setExpanded(isExp ? null : brief.id)}
-            style={[styles.briefCard, { borderLeftColor: sc }]}>
+          return (
+            <Card
+              key={brief.id}
+              level={2}
+              padding="lg"
+              onPress={() => handleExpand(brief.id)}
+              accentColor={sc}
+              accentPosition="left"
+              style={styles.briefCard}>
 
-            <View style={styles.briefHeader}>
-              <View style={[styles.sevBadge, { backgroundColor: sc + '20' }]}>
-                <Text style={[styles.sevText, { color: sc }]}>{brief.severity.toUpperCase()}</Text>
+              <View style={styles.briefHeader}>
+                <Badge label={brief.severity.toUpperCase()} color={sc} size="sm" />
+                <Text variant="caption" color={semantic.success} weight="700">{brief.status}</Text>
               </View>
-              <Text style={styles.statusText}>{brief.status}</Text>
-            </View>
 
-            <Text style={styles.briefTitle}>{brief.title}</Text>
-            <Text style={styles.briefSummary}>{brief.summary}</Text>
+              <Text variant="h3" color="primary" style={{ marginBottom: spacing.sm }}>
+                {brief.title}
+              </Text>
+              <Text variant="bodySm" color="tertiary" style={{ lineHeight: 19 }}>
+                {brief.summary}
+              </Text>
 
-            {isExp && (
-              <View style={styles.expandedContent}>
-                <Text style={styles.subHeading}>Key Points</Text>
-                {brief.keyPoints.map((p, i) => (
-                  <View key={i} style={styles.bulletRow}>
-                    <Text style={[styles.bullet, { color: sc }]}>●</Text>
-                    <Text style={styles.bulletText}>{p}</Text>
+              {isExp && (
+                <View style={styles.expandedContent}>
+                  <Text variant="h4" color="primary" style={{ marginBottom: spacing.md }}>
+                    Key Points
+                  </Text>
+                  {brief.keyPoints.map((p, i) => (
+                    <View key={i} style={styles.bulletRow}>
+                      <Text variant="bodySm" color={sc} weight="700">●</Text>
+                      <Text variant="bodySm" color="secondary" style={styles.bulletText}>{p}</Text>
+                    </View>
+                  ))}
+
+                  <Text variant="h4" color="primary" style={{ marginBottom: spacing.md, marginTop: spacing.lg }}>
+                    Recommendations
+                  </Text>
+                  {brief.recommendations.map((r, i) => (
+                    <View key={i} style={styles.bulletRow}>
+                      <Text variant="bodySm" color={brand.amber} weight="700">→</Text>
+                      <Text variant="bodySm" color="secondary" style={styles.bulletText}>{r}</Text>
+                    </View>
+                  ))}
+
+                  <View style={{ marginTop: spacing.xl }}>
+                    <Button label="Share Brief" onPress={() => handleShare(brief)} fullWidth />
                   </View>
-                ))}
+                </View>
+              )}
 
-                <Text style={[styles.subHeading, { marginTop: 16 }]}>Recommendations</Text>
-                {brief.recommendations.map((r, i) => (
-                  <View key={i} style={styles.bulletRow}>
-                    <Text style={[styles.bullet, { color: '#f4b942' }]}>→</Text>
-                    <Text style={styles.bulletText}>{r}</Text>
-                  </View>
-                ))}
+              <Text variant="caption" color="muted" style={{ marginTop: spacing.md, textAlign: 'center', fontStyle: 'italic' }}>
+                {isExp ? 'Tap to collapse' : 'Tap to expand'}
+              </Text>
+            </Card>
+          );
+        })
+      )}
 
-                <TouchableOpacity style={styles.shareBtn} onPress={() => handleShare(brief)}>
-                  <Text style={styles.shareBtnText}>Share Brief</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            <Text style={styles.expandHint}>{isExp ? 'Tap to collapse' : 'Tap to expand'}</Text>
-          </TouchableOpacity>
-        );
-      })}
-
-      <View style={{ height: 32 }} />
+      <View style={{ height: spacing.huge }} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0a0f' },
-  center: { flex: 1, backgroundColor: '#0a0a0f', justifyContent: 'center', alignItems: 'center' },
-  intro: { color: '#94a3b8', fontSize: 14, lineHeight: 20, padding: 16, paddingBottom: 8 },
-
-  briefCard: {
-    marginHorizontal: 16, marginBottom: 14, borderRadius: 12, padding: 16,
-    backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1, borderLeftWidth: 4,
-  },
-  briefHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  sevBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-  sevText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
-  statusText: { color: '#22c55e', fontSize: 12, fontWeight: '600' },
-  briefTitle: { color: '#f5f5f5', fontSize: 17, fontWeight: '700', marginBottom: 8 },
-  briefSummary: { color: '#94a3b8', fontSize: 13, lineHeight: 19 },
-  expandHint: { color: '#64748b', fontSize: 12, marginTop: 10, textAlign: 'center', fontStyle: 'italic' },
-
-  expandedContent: { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
-  subHeading: { color: '#f5f5f5', fontSize: 15, fontWeight: '700', marginBottom: 10 },
-  bulletRow: { flexDirection: 'row', marginBottom: 6, paddingRight: 16 },
-  bullet: { fontSize: 12, marginRight: 8, marginTop: 2 },
-  bulletText: { color: '#e2e8f0', fontSize: 13, lineHeight: 19, flex: 1 },
-
-  shareBtn: {
-    marginTop: 20, borderRadius: 14, padding: 14, alignItems: 'center',
-    backgroundColor: '#f4b942',
-    shadowColor: '#f4b942', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25, shadowRadius: 8, elevation: 6,
-  },
-  shareBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  container: { flex: 1, backgroundColor: background.primary },
+  intro: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.sm, lineHeight: 20 },
+  briefCard: { marginHorizontal: spacing.lg, marginBottom: spacing.md },
+  briefHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
+  expandedContent: { marginTop: spacing.lg, paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
+  bulletRow: { flexDirection: 'row', marginBottom: spacing.sm, paddingRight: spacing.lg, gap: spacing.sm },
+  bulletText: { flex: 1, lineHeight: 19 },
 });

@@ -1,20 +1,19 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   RefreshControl,
-  ActivityIndicator,
   Dimensions,
 } from 'react-native';
-import { api, fmt, sumIndicator, filterByState } from '@/lib/api';
+import { api, fmt, sumIndicator } from '@/lib/api';
 import { MasterRow, TrendAnalysisRow, IndicatorAnalysisRow, ApiResponse } from '@/lib/api-types';
-import { stateColors } from '@/constants/Colors';
 import { API_BASE_URL } from '@/constants/Config';
+import { spacing, radius, background, elevation, semantic, brand, stateColor, textColor } from '@/constants/Tokens';
+import { Card, Text, Badge, EmptyState, SkeletonRow, SkeletonKPI, AnimatedCounter } from '@/components/ui';
 
 const { width: SW } = Dimensions.get('window');
-const CARD_W = (SW - 48) / 2;
+const CARD_W = (SW - spacing.lg * 2 - spacing.sm) / 2;
 
 export default function AnalysisScreen() {
   const [loading, setLoading] = useState(true);
@@ -41,7 +40,6 @@ export default function AnalysisScreen() {
 
   useEffect(() => { fetchData(); }, []);
 
-  // KPI summaries — same as web app
   const kpis = useMemo(() => {
     if (!masterRows.length) return null;
     const totalLGAs = new Set(masterRows.map(r => r.lga)).size;
@@ -56,7 +54,6 @@ export default function AnalysisScreen() {
     return { totalLGAs, displacement2025, displacementChange, conflict2025, improving, declining, stable };
   }, [masterRows]);
 
-  // Risk zone distribution
   const riskZones = useMemo(() => {
     const lgas = new Map<string, MasterRow>();
     for (const r of masterRows) { if (!lgas.has(r.lga)) lgas.set(r.lga, r); }
@@ -71,7 +68,6 @@ export default function AnalysisScreen() {
     return zones;
   }, [masterRows]);
 
-  // Anomalies: >30% change
   const anomalies = useMemo(() => {
     return [...masterRows]
       .filter(r => Math.abs(r.change_pct) > 30)
@@ -79,7 +75,6 @@ export default function AnalysisScreen() {
       .slice(0, 8);
   }, [masterRows]);
 
-  // Pattern detection: top/bottom by indicator
   const patterns = useMemo(() => {
     const byInd = new Map<string, IndicatorAnalysisRow[]>();
     for (const row of indicatorRows) {
@@ -94,254 +89,219 @@ export default function AnalysisScreen() {
     });
   }, [indicatorRows]);
 
-  if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#f4b942" /></View>;
-  }
-
   return (
     <ScrollView
       style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor="#f4b942" />}>
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor={brand.amber} />}>
 
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerIcon}><Text style={styles.headerIconText}>AI</Text></View>
-        <Text style={styles.headerTitle}>AI Analysis Engine</Text>
-        <Text style={styles.headerSub}>
+        <View style={styles.headerIcon}>
+          <Text variant="h4" color={brand.amber}>AI</Text>
+        </View>
+        <Text variant="h1" color="primary">Analysis Engine</Text>
+        <Text variant="bodySm" color="tertiary" style={{ marginTop: spacing.sm, textAlign: 'center', paddingHorizontal: spacing.xxxl, lineHeight: 20 }}>
           Data-driven analysis across {kpis?.totalLGAs ?? 65} LGAs, 10 indicators, and 4 years of BAY States data.
         </Text>
       </View>
 
       {/* KPI Cards */}
-      {kpis && (
-        <View style={styles.kpiGrid}>
-          <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>Displacement (2025)</Text>
-            <Text style={styles.kpiValue}>{fmt(kpis.displacement2025)}</Text>
-            <Text style={[styles.kpiChange, { color: Number(kpis.displacementChange) > 0 ? '#ef4444' : '#22c55e' }]}>
-              {Number(kpis.displacementChange) > 0 ? '+' : ''}{kpis.displacementChange}% since 2022
-            </Text>
-          </View>
-          <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>Conflict Incidents</Text>
-            <Text style={styles.kpiValue}>{fmt(kpis.conflict2025)}</Text>
-          </View>
-          <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>Improving Indicators</Text>
-            <Text style={[styles.kpiValue, { color: '#22c55e' }]}>{kpis.improving}</Text>
-            <Text style={styles.kpiSub}>of {masterRows.length} tracked</Text>
-          </View>
-          <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>Declining Indicators</Text>
-            <Text style={[styles.kpiValue, { color: '#ef4444' }]}>{kpis.declining}</Text>
-            <Text style={styles.kpiSub}>{kpis.stable} stable</Text>
-          </View>
-        </View>
-      )}
+      <View style={styles.kpiGrid}>
+        {loading ? (
+          [1, 2, 3, 4].map((i) => (
+            <View key={i} style={{ width: CARD_W, margin: spacing.xs / 2 }}>
+              <SkeletonKPI />
+            </View>
+          ))
+        ) : kpis ? (
+          <>
+            <View style={{ width: CARD_W, margin: spacing.xs / 2 }}>
+              <Card level={2} padding="md">
+                <Text variant="caption" color="tertiary">Displacement (2025)</Text>
+                <AnimatedCounter value={kpis.displacement2025} variant="numMd" color="primary" format={fmt} style={{ marginTop: spacing.xs }} />
+                <Text variant="caption" color={Number(kpis.displacementChange) > 0 ? semantic.danger : semantic.success} style={{ marginTop: 2 }}>
+                  {Number(kpis.displacementChange) > 0 ? '+' : ''}{kpis.displacementChange}% since 2022
+                </Text>
+              </Card>
+            </View>
+            <View style={{ width: CARD_W, margin: spacing.xs / 2 }}>
+              <Card level={2} padding="md">
+                <Text variant="caption" color="tertiary">Conflict Incidents</Text>
+                <AnimatedCounter value={kpis.conflict2025} variant="numMd" color="primary" format={fmt} style={{ marginTop: spacing.xs }} />
+              </Card>
+            </View>
+            <View style={{ width: CARD_W, margin: spacing.xs / 2 }}>
+              <Card level={2} padding="md">
+                <Text variant="caption" color="tertiary">Improving</Text>
+                <AnimatedCounter value={kpis.improving} variant="numMd" color={semantic.success} style={{ marginTop: spacing.xs }} />
+                <Text variant="caption" color="muted" style={{ marginTop: 2 }}>of {masterRows.length} tracked</Text>
+              </Card>
+            </View>
+            <View style={{ width: CARD_W, margin: spacing.xs / 2 }}>
+              <Card level={2} padding="md">
+                <Text variant="caption" color="tertiary">Declining</Text>
+                <AnimatedCounter value={kpis.declining} variant="numMd" color={semantic.danger} style={{ marginTop: spacing.xs }} />
+                <Text variant="caption" color="muted" style={{ marginTop: 2 }}>{kpis.stable} stable</Text>
+              </Card>
+            </View>
+          </>
+        ) : null}
+      </View>
 
       {/* Risk Zone Distribution */}
-      <Text style={styles.sectionTitle}>Risk Zone Distribution</Text>
-      {Object.entries(riskZones).map(([state, counts]) => {
-        const total = counts.high + counts.medium + counts.low;
-        const sc = stateColors[state.toLowerCase() as keyof typeof stateColors] || '#6ec6e8';
-        return (
-          <View key={state} style={styles.zoneCard}>
-            <Text style={[styles.zoneName, { color: sc }]}>{state}</Text>
-            <View style={styles.zoneBar}>
-              {counts.high > 0 && <View style={[styles.zoneSegment, { flex: counts.high, backgroundColor: '#ef4444' }]} />}
-              {counts.medium > 0 && <View style={[styles.zoneSegment, { flex: counts.medium, backgroundColor: '#f4b942' }]} />}
-              {counts.low > 0 && <View style={[styles.zoneSegment, { flex: counts.low, backgroundColor: '#22c55e' }]} />}
-            </View>
-            <View style={styles.zoneLegend}>
-              <Text style={[styles.zoneLabel, { color: '#ef4444' }]}>High: {counts.high}</Text>
-              <Text style={[styles.zoneLabel, { color: '#f4b942' }]}>Med: {counts.medium}</Text>
-              <Text style={[styles.zoneLabel, { color: '#22c55e' }]}>Low: {counts.low}</Text>
-            </View>
-          </View>
-        );
-      })}
-
-      {/* State Indicator Comparison */}
-      <Text style={styles.sectionTitle}>State Indicator Profile (2025)</Text>
-      {(() => {
-        const indicators = [...new Set(masterRows.map(r => r.indicator))].slice(0, 6);
-        return indicators.map((ind) => {
-          const vals = (['Borno', 'Adamawa', 'Yobe'] as const).map(state => {
-            const rows = masterRows.filter(r => r.indicator === ind && r.state === state);
-            return rows.length ? +(rows.reduce((s, r) => s + r.y2025, 0) / rows.length).toFixed(1) : 0;
-          });
+      <Text variant="h3" color="primary" style={styles.sectionTitle}>Risk Zone Distribution</Text>
+      {loading ? (
+        [1, 2, 3].map((i) => <SkeletonRow key={i} />)
+      ) : (
+        Object.entries(riskZones).map(([state, counts]) => {
+          const sc = stateColor[state.toLowerCase() as keyof typeof stateColor] || semantic.info;
           return (
-            <View key={ind} style={styles.profileCard}>
-              <Text style={styles.profileIndicator}>{ind}</Text>
-              <View style={styles.profileVals}>
-                {(['Borno', 'Adamawa', 'Yobe'] as const).map((state, i) => (
-                  <View key={state} style={styles.profileVal}>
-                    <Text style={[styles.profileNum, { color: stateColors[state.toLowerCase() as keyof typeof stateColors] }]}>
-                      {fmt(vals[i])}
-                    </Text>
-                    <Text style={styles.profileState}>{state}</Text>
-                  </View>
+            <Card key={state} level={2} padding="md" style={styles.spaced}>
+              <Text variant="h4" color={sc} style={{ marginBottom: spacing.sm }}>{state}</Text>
+              <View style={styles.zoneBar}>
+                {counts.high > 0 && <View style={{ flex: counts.high, height: 12, backgroundColor: semantic.danger }} />}
+                {counts.medium > 0 && <View style={{ flex: counts.medium, height: 12, backgroundColor: semantic.warning }} />}
+                {counts.low > 0 && <View style={{ flex: counts.low, height: 12, backgroundColor: semantic.success }} />}
+              </View>
+              <View style={styles.zoneLegend}>
+                <Text variant="caption" color={semantic.danger}>High: {counts.high}</Text>
+                <Text variant="caption" color={semantic.warning}>Med: {counts.medium}</Text>
+                <Text variant="caption" color={semantic.success}>Low: {counts.low}</Text>
+              </View>
+            </Card>
+          );
+        })
+      )}
+
+      {/* Anomaly Detection */}
+      <Text variant="h3" color="primary" style={styles.sectionTitle}>Anomaly Detection</Text>
+      <Text variant="caption" color="tertiary" style={styles.sectionSub}>
+        LGA-indicator pairs with &gt;30% change flagged
+      </Text>
+      {loading ? (
+        [1, 2, 3].map((i) => <SkeletonRow key={i} />)
+      ) : anomalies.length === 0 ? (
+        <EmptyState icon="check-circle" title="No anomalies" description="All indicators are within normal variance." />
+      ) : (
+        anomalies.map((row, i) => (
+          <Card key={i} level={2} padding="md" style={styles.rowCard}>
+            <View style={{ flex: 1 }}>
+              <Text variant="label" color="primary">{row.lga}</Text>
+              <Text variant="caption" color="tertiary" style={{ marginTop: 2 }}>
+                {row.state} · {row.indicator}
+              </Text>
+            </View>
+            <Badge
+              label={`${row.change_pct > 0 ? '+' : ''}${row.change_pct.toFixed(1)}%`}
+              color={row.change_pct > 0 ? semantic.danger : semantic.success}
+              size="sm"
+            />
+          </Card>
+        ))
+      )}
+
+      {/* Pattern Detection */}
+      <Text variant="h3" color="primary" style={styles.sectionTitle}>Pattern Detection</Text>
+      <Text variant="caption" color="tertiary" style={styles.sectionSub}>
+        Top and bottom performing LGAs per indicator
+      </Text>
+      {loading ? (
+        [1, 2].map((i) => <SkeletonRow key={i} />)
+      ) : patterns.length === 0 ? (
+        <EmptyState icon="bar-chart" title="No pattern data" description="Indicator analysis data is not yet available." />
+      ) : (
+        patterns.map(({ indicator, top3, bottom3, avgChange }) => (
+          <Card key={indicator} level={2} padding="md" style={styles.spaced}>
+            <View style={styles.patternHeader}>
+              <Text variant="h4" color="primary" style={{ flex: 1 }}>{indicator}</Text>
+              <Badge
+                label={`Avg ${avgChange > 0 ? '+' : ''}${avgChange}%`}
+                color={avgChange >= 0 ? semantic.success : semantic.danger}
+                size="sm"
+              />
+            </View>
+            <View style={styles.patternColumns}>
+              <View style={{ flex: 1 }}>
+                <Text variant="caption" color={semantic.success} weight="700" style={{ marginBottom: spacing.sm }}>
+                  Top Performing
+                </Text>
+                {top3.map((r, i) => (
+                  <Text key={i} variant="caption" color="tertiary" style={{ marginBottom: 3 }}>
+                    #{r.rank} {r.lga} · {fmt(r.y2025)}
+                  </Text>
+                ))}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text variant="caption" color={semantic.danger} weight="700" style={{ marginBottom: spacing.sm }}>
+                  Lowest Performing
+                </Text>
+                {bottom3.map((r, i) => (
+                  <Text key={i} variant="caption" color="tertiary" style={{ marginBottom: 3 }}>
+                    #{r.rank} {r.lga} · {fmt(r.y2025)}
+                  </Text>
                 ))}
               </View>
             </View>
-          );
-        });
-      })()}
-
-      {/* Anomaly Detection */}
-      <Text style={styles.sectionTitle}>Anomaly Detection</Text>
-      <Text style={styles.sectionSub}>LGA-indicator pairs with &gt;30% change flagged for review</Text>
-      {anomalies.length === 0 && <Text style={styles.emptyText}>No significant anomalies detected</Text>}
-      {anomalies.map((row, i) => (
-        <View key={i} style={styles.anomalyCard}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.anomalyLga}>{row.lga}</Text>
-            <Text style={styles.anomalyMeta}>{row.state} — {row.indicator}</Text>
-          </View>
-          <View style={[styles.anomalyBadge, { backgroundColor: row.change_pct > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)' }]}>
-            <Text style={{ color: row.change_pct > 0 ? '#ef4444' : '#22c55e', fontSize: 13, fontWeight: '700' }}>
-              {row.change_pct > 0 ? '+' : ''}{row.change_pct.toFixed(1)}%
-            </Text>
-          </View>
-        </View>
-      ))}
-
-      {/* Pattern Detection */}
-      <Text style={styles.sectionTitle}>Pattern Detection — Indicator Rankings</Text>
-      <Text style={styles.sectionSub}>Top and bottom performing LGAs per indicator</Text>
-      {patterns.length === 0 && <Text style={styles.emptyText}>No indicator analysis data available</Text>}
-      {patterns.map(({ indicator, top3, bottom3, avgChange }) => (
-        <View key={indicator} style={styles.patternCard}>
-          <View style={styles.patternHeader}>
-            <Text style={styles.patternIndicator}>{indicator}</Text>
-            <View style={[styles.patternBadge, { borderColor: avgChange >= 0 ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)' }]}>
-              <Text style={{ color: avgChange >= 0 ? '#22c55e' : '#ef4444', fontSize: 11, fontWeight: '600' }}>
-                Avg: {avgChange > 0 ? '+' : ''}{avgChange}%
-              </Text>
-            </View>
-          </View>
-          <View style={styles.patternColumns}>
-            <View style={styles.patternCol}>
-              <Text style={[styles.patternColTitle, { color: '#22c55e' }]}>Top Performing</Text>
-              {top3.map((r, i) => (
-                <Text key={i} style={styles.patternRow}>
-                  #{r.rank} {r.lga} ({r.state}) — {fmt(r.y2025)}
-                </Text>
-              ))}
-            </View>
-            <View style={styles.patternCol}>
-              <Text style={[styles.patternColTitle, { color: '#ef4444' }]}>Lowest Performing</Text>
-              {bottom3.map((r, i) => (
-                <Text key={i} style={styles.patternRow}>
-                  #{r.rank} {r.lga} ({r.state}) — {fmt(r.y2025)}
-                </Text>
-              ))}
-            </View>
-          </View>
-        </View>
-      ))}
+          </Card>
+        ))
+      )}
 
       {/* Key Insights */}
       {trendRows.length > 0 && (
         <>
-          <Text style={styles.sectionTitle}>Key Insights</Text>
+          <Text variant="h3" color="primary" style={styles.sectionTitle}>Key Insights</Text>
           {trendRows.slice(0, 8).map((row, i) => (
-            <View key={i} style={styles.insightCard}>
+            <Card key={i} level={1} padding="md" style={[styles.spaced, { flexDirection: 'row', gap: spacing.md }]}>
               <View style={styles.insightDot} />
               <View style={{ flex: 1 }}>
                 {row.metric && (
-                  <Text style={styles.insightMeta}>
+                  <Text variant="caption" color={brand.amber} weight="700" style={{ marginBottom: 3 }}>
                     {row.metric} {row.state ? `— ${row.state}` : ''}
                   </Text>
                 )}
-                <Text style={styles.insightContent}>{row.content}</Text>
+                <Text variant="bodySm" color="secondary" style={{ lineHeight: 19 }}>{row.content}</Text>
               </View>
-            </View>
+            </Card>
           ))}
         </>
       )}
 
-      <View style={{ height: 40 }} />
+      <View style={{ height: spacing.huge }} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0a0f' },
-  center: { flex: 1, backgroundColor: '#0a0a0f', justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, backgroundColor: background.primary },
 
-  header: { alignItems: 'center', paddingVertical: 24 },
-  headerIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(244,185,66,0.1)', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  headerIconText: { color: '#f4b942', fontSize: 18, fontWeight: '800' },
-  headerTitle: { color: '#f5f5f5', fontSize: 24, fontWeight: '800' },
-  headerSub: { color: '#94a3b8', fontSize: 13, marginTop: 6, textAlign: 'center', paddingHorizontal: 32 },
-
-  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12 },
-  kpiCard: {
-    width: CARD_W, margin: 4, borderRadius: 12, padding: 14,
-    backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1,
+  header: { alignItems: 'center', paddingVertical: spacing.xxl },
+  headerIcon: {
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: brand.amberBg,
+    borderWidth: 1.5, borderColor: brand.amberBorder,
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: spacing.md,
   },
-  kpiLabel: { color: '#94a3b8', fontSize: 11 },
-  kpiValue: { color: '#f5f5f5', fontSize: 22, fontWeight: '800', marginTop: 2 },
-  kpiChange: { fontSize: 11, marginTop: 2, fontWeight: '500' },
-  kpiSub: { color: '#64748b', fontSize: 11, marginTop: 2 },
 
-  sectionTitle: { color: '#f5f5f5', fontSize: 17, fontWeight: '700', marginHorizontal: 16, marginTop: 28, marginBottom: 4 },
-  sectionSub: { color: '#64748b', fontSize: 13, marginHorizontal: 16, marginBottom: 12 },
-  emptyText: { color: '#64748b', fontSize: 13, marginHorizontal: 16, fontStyle: 'italic', marginBottom: 8 },
+  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.lg - spacing.xs / 2 },
 
-  // Risk zones
-  zoneCard: {
-    marginHorizontal: 16, marginBottom: 10, borderRadius: 12, padding: 14,
-    backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1,
+  sectionTitle: { marginHorizontal: spacing.lg, marginTop: spacing.xxxl, marginBottom: spacing.xs },
+  sectionSub: { marginHorizontal: spacing.lg, marginBottom: spacing.md },
+
+  spaced: { marginHorizontal: spacing.lg, marginBottom: spacing.sm },
+
+  zoneBar: { flexDirection: 'row', height: 12, borderRadius: radius.sm, overflow: 'hidden', marginBottom: spacing.sm },
+  zoneLegend: { flexDirection: 'row', gap: spacing.md },
+
+  rowCard: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  zoneName: { fontSize: 15, fontWeight: '700', marginBottom: 8 },
-  zoneBar: { flexDirection: 'row', height: 12, borderRadius: 6, overflow: 'hidden', marginBottom: 6 },
-  zoneSegment: { height: 12 },
-  zoneLegend: { flexDirection: 'row', gap: 12 },
-  zoneLabel: { fontSize: 11, fontWeight: '600' },
 
-  // Profile
-  profileCard: {
-    marginHorizontal: 16, marginBottom: 8, borderRadius: 12, padding: 14,
-    backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1,
-  },
-  profileIndicator: { color: '#f5f5f5', fontSize: 14, fontWeight: '600', marginBottom: 8 },
-  profileVals: { flexDirection: 'row', justifyContent: 'space-around' },
-  profileVal: { alignItems: 'center' },
-  profileNum: { fontSize: 16, fontWeight: '700' },
-  profileState: { color: '#64748b', fontSize: 10, marginTop: 2 },
+  patternHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, gap: spacing.sm },
+  patternColumns: { flexDirection: 'row', gap: spacing.md },
 
-  // Anomaly
-  anomalyCard: {
-    marginHorizontal: 16, marginBottom: 8, borderRadius: 12, padding: 12,
-    backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1,
-    flexDirection: 'row', alignItems: 'center',
-  },
-  anomalyLga: { color: '#f5f5f5', fontSize: 14, fontWeight: '600' },
-  anomalyMeta: { color: '#94a3b8', fontSize: 11, marginTop: 1 },
-  anomalyBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-
-  // Pattern
-  patternCard: {
-    marginHorizontal: 16, marginBottom: 10, borderRadius: 12, padding: 14,
-    backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1,
-  },
-  patternHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  patternIndicator: { color: '#f5f5f5', fontSize: 14, fontWeight: '700' },
-  patternBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
-  patternColumns: { flexDirection: 'row', gap: 12 },
-  patternCol: { flex: 1 },
-  patternColTitle: { fontSize: 11, fontWeight: '700', marginBottom: 6 },
-  patternRow: { color: '#94a3b8', fontSize: 11, marginBottom: 3 },
-
-  // Insights
-  insightCard: {
-    marginHorizontal: 16, marginBottom: 8, borderRadius: 12, padding: 14,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    flexDirection: 'row', gap: 10,
-  },
-  insightDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#f4b942', marginTop: 4 },
-  insightMeta: { color: '#f4b942', fontSize: 11, fontWeight: '600', marginBottom: 3 },
-  insightContent: { color: '#e2e8f0', fontSize: 13, lineHeight: 19 },
+  insightDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: brand.amber, marginTop: 6 },
 });
