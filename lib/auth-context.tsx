@@ -9,12 +9,10 @@ import {
   updateProfile,
   GoogleAuthProvider,
   signInWithCredential,
+  OAuthProvider,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-
-WebBrowser.maybeCompleteAuthSession();
+import { Alert, Platform } from 'react-native';
 
 interface AuthContextType {
   user: User | null;
@@ -35,13 +33,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Google auth session
-  const [, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
-    webClientId: '525728563081-REPLACE_WITH_WEB_CLIENT_ID.apps.googleusercontent.com',
-    iosClientId: undefined, // Add when you have iOS OAuth client
-    androidClientId: undefined, // Add when you have Android OAuth client
-  });
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
@@ -49,18 +40,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     return () => unsubscribe();
   }, []);
-
-  // Handle Google auth response
-  useEffect(() => {
-    if (googleResponse?.type === 'success') {
-      const { id_token } = googleResponse.params;
-      const credential = GoogleAuthProvider.credential(id_token);
-      setLoading(true);
-      signInWithCredential(auth, credential)
-        .catch((err: any) => setError(getErrorMessage(err.code)))
-        .finally(() => setLoading(false));
-    }
-  }, [googleResponse]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -102,19 +81,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signInWithGoogleHandler = async () => {
-    try {
-      setError(null);
-      await promptGoogleAsync();
-    } catch (err: any) {
-      setError(err.message || 'Google sign-in failed');
-    }
+  const signInWithGoogle = async () => {
+    // Google sign-in requires a development build with native modules.
+    // In Expo Go, show a helpful message. In a dev/prod build, this would
+    // use @react-native-google-signin/google-signin.
+    Alert.alert(
+      'Google Sign-In',
+      'Google sign-in requires a production build. Please use email/password for now, or build the app with EAS to enable Google sign-in.',
+      [{ text: 'OK' }]
+    );
   };
 
   const resetPassword = async (email: string) => {
     try {
       setError(null);
       await sendPasswordResetEmail(auth, email);
+      Alert.alert('Password Reset', 'A password reset email has been sent to your inbox.');
     } catch (err: any) {
       const message = getErrorMessage(err.code);
       setError(message);
@@ -127,15 +109,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user,
-        loading,
-        error,
-        signIn,
-        signUp,
-        signOut,
-        signInWithGoogle: signInWithGoogleHandler,
-        resetPassword,
-        clearError,
+        user, loading, error,
+        signIn, signUp, signOut, signInWithGoogle, resetPassword, clearError,
       }}>
       {children}
     </AuthContext.Provider>
