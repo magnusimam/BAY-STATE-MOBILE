@@ -15,7 +15,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.baystates.humaid"
+      "bundleIdentifier": "com.baystates.humaid",
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +24,8 @@
         "backgroundColor": "#f4b942"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.baystates.humaid"
+      "package": "com.baystates.humaid",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -31,7 +33,8 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true

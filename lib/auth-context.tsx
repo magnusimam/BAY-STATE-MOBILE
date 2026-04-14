@@ -9,10 +9,19 @@ import {
   updateProfile,
   GoogleAuthProvider,
   signInWithCredential,
-  OAuthProvider,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { Alert, Platform } from 'react-native';
+import { Alert } from 'react-native';
+import {
+  GoogleSignin,
+  isSuccessResponse,
+} from '@react-native-google-signin/google-signin';
+
+// Configure Google Sign-In with your Firebase web client ID
+// Get this from: Firebase Console → Authentication → Sign-in method → Google → Web client ID
+GoogleSignin.configure({
+  webClientId: '525728563081-REPLACE_WITH_YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+});
 
 interface AuthContextType {
   user: User | null;
@@ -75,6 +84,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       setError(null);
+      // Sign out from both Firebase and Google
+      try { await GoogleSignin.signOut(); } catch {}
       await firebaseSignOut(auth);
     } catch (err: any) {
       setError(getErrorMessage(err.code));
@@ -82,14 +93,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    // Google sign-in requires a development build with native modules.
-    // In Expo Go, show a helpful message. In a dev/prod build, this would
-    // use @react-native-google-signin/google-signin.
-    Alert.alert(
-      'Google Sign-In',
-      'Google sign-in requires a production build. Please use email/password for now, or build the app with EAS to enable Google sign-in.',
-      [{ text: 'OK' }]
-    );
+    try {
+      setError(null);
+      setLoading(true);
+
+      // Check if Google Play Services are available (Android)
+      await GoogleSignin.hasPlayServices();
+
+      // Trigger Google sign-in
+      const response = await GoogleSignin.signIn();
+
+      if (isSuccessResponse(response)) {
+        const { idToken } = response.data;
+        if (!idToken) throw new Error('No ID token returned from Google');
+
+        // Create Firebase credential and sign in
+        const credential = GoogleAuthProvider.credential(idToken);
+        await signInWithCredential(auth, credential);
+      }
+    } catch (err: any) {
+      // Don't show error if user cancelled
+      if (err.code === 'SIGN_IN_CANCELLED' || err.code === '12501') {
+        setLoading(false);
+        return;
+      }
+      const message = err.message || 'Google sign-in failed. Please try again.';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetPassword = async (email: string) => {
@@ -140,8 +172,6 @@ function getErrorMessage(errorCode: string): string {
       return 'Invalid email or password. Please try again.';
     case 'auth/too-many-requests':
       return 'Too many failed attempts. Please try again later.';
-    case 'auth/popup-closed-by-user':
-      return 'Sign-in was cancelled.';
     default:
       return 'An error occurred. Please try again.';
   }
