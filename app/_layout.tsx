@@ -34,7 +34,6 @@ function ProtectedRoutes() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="state/[code]" options={{ headerShown: true, title: 'State Details' }} />
     </Stack>
   );
 }
