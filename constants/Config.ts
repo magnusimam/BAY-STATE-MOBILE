@@ -1,5 +1,5 @@
 // API base URL — points to the Cloudflare Workers backend
-export const API_BASE_URL = 'https://humaid-bay-states.pages.dev';
+export const API_BASE_URL = 'https://humaid-bay-states.bay-state-intelworkers.workers.dev';
 
 // Firebase config (same project as web app)
 export const FIREBASE_CONFIG = {
