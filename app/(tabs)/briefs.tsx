@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Share,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
+import { api, computeSummary, filterByState, avgIndicator, fmt } from '@/lib/api';
+import { MasterRow } from '@/lib/api-types';
 
 interface PolicyBrief {
   id: string;
@@ -18,87 +22,121 @@ interface PolicyBrief {
   recommendations: string[];
 }
 
-const BRIEFS: PolicyBrief[] = [
-  {
-    id: '1',
-    title: 'Borno State Crisis Response',
-    severity: 'critical',
-    status: 'Published',
-    summary: 'Comprehensive analysis of the ongoing humanitarian crisis in Borno State, focusing on displacement patterns, conflict hotspots, and resource allocation gaps.',
-    keyPoints: [
-      'Over 1.8M internally displaced persons in Borno alone',
-      'Conflict incidents concentrated in 8 high-risk LGAs',
-      'Healthcare infrastructure critically understaffed',
-      'Education disruption affecting 65% of school-age children',
-    ],
-    recommendations: [
-      'Increase mobile health units in underserved LGAs',
-      'Establish additional IDP camps in southern Borno corridor',
-      'Deploy rapid-response education programs',
-      'Strengthen early warning systems in border regions',
-    ],
-  },
-  {
-    id: '2',
-    title: 'Youth Development Strategy - BAY States',
-    severity: 'high',
-    status: 'Published',
-    summary: 'Strategic framework for youth empowerment across the BAY states region, addressing unemployment, education gaps, and skill development.',
-    keyPoints: [
-      'Youth unemployment exceeds 45% across BAY states',
-      'Vocational training programs reach only 12% of eligible youth',
-      'Digital literacy remains below 20% in rural LGAs',
-      'SME participation among youth declining year-over-year',
-    ],
-    recommendations: [
-      'Scale vocational training centers in each LGA',
-      'Launch digital skills initiative targeting rural communities',
-      'Create youth enterprise fund with micro-loan access',
-      'Partner with private sector for apprenticeship programs',
-    ],
-  },
-  {
-    id: '3',
-    title: 'Education Gap Analysis',
-    severity: 'medium',
-    status: 'Published',
-    summary: 'Detailed assessment of educational disparities across the BAY states, identifying systemic barriers and intervention opportunities.',
-    keyPoints: [
-      'Out-of-school rate highest in Yobe at 72%',
-      'Gender gap in enrollment widening in rural areas',
-      'Teacher-to-student ratio averages 1:85 in conflict zones',
-      'Infrastructure damage affecting 40% of schools in Borno',
-    ],
-    recommendations: [
-      'Prioritize school reconstruction in conflict-affected areas',
-      'Implement community-based education for displaced children',
-      'Increase teacher recruitment with conflict-zone incentives',
-      'Deploy mobile learning solutions for remote communities',
-    ],
-  },
-];
-
 const sevColors = { critical: '#ef4444', high: '#f59e0b', medium: '#6ec6e8' };
 
 export default function BriefsScreen() {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [allRows, setAllRows] = useState<MasterRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchData = async () => {
+    try {
+      const res = await api.getMaster();
+      setAllRows(res.data ?? []);
+    } catch {} finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  // Compute live values for briefs (same as web app)
+  const briefs = useMemo<PolicyBrief[]>(() => {
+    const borno = computeSummary(filterByState(allRows, 'Borno'));
+    const adamawa = computeSummary(filterByState(allRows, 'Adamawa'));
+    const yobe = computeSummary(filterByState(allRows, 'Yobe'));
+    const all = computeSummary(allRows);
+
+    const bornoUnemp = avgIndicator(filterByState(allRows, 'Borno'), 'Unemployment Rate');
+    const bayUnemp = avgIndicator(allRows, 'Unemployment Rate');
+    const yobeUnemp = avgIndicator(filterByState(allRows, 'Yobe'), 'Unemployment Rate');
+
+    return [
+      {
+        id: '1',
+        title: 'Borno State Crisis Response',
+        severity: 'critical',
+        status: 'Published',
+        summary: `Comprehensive analysis of the ongoing humanitarian crisis in Borno State, covering ${borno.totalLGAs} LGAs with ${fmt(borno.totalDisplacement)} displaced persons and ${fmt(borno.totalConflict)} conflict incidents.`,
+        keyPoints: [
+          `${fmt(borno.totalDisplacement)} internally displaced persons across ${borno.totalLGAs} LGAs`,
+          `${fmt(borno.totalConflict)} conflict incidents concentrated in high-risk zones`,
+          `Average literacy rate at ${borno.avgLiteracy.toFixed(1)}%, unemployment at ${bornoUnemp.toFixed(1)}%`,
+          `${fmt(borno.totalSMEs)} SMEs registered — economic recovery underway`,
+        ],
+        recommendations: [
+          'Increase mobile health units in underserved LGAs',
+          'Establish additional IDP camps in southern Borno corridor',
+          'Deploy rapid-response education programs',
+          'Strengthen early warning systems in border regions',
+        ],
+      },
+      {
+        id: '2',
+        title: 'Youth Development Strategy — BAY States',
+        severity: 'high',
+        status: 'Published',
+        summary: `Strategic framework for youth empowerment across ${all.totalLGAs} LGAs in the BAY states, addressing ${bayUnemp.toFixed(1)}% average unemployment and ${fmt(all.totalSMEs)} registered SMEs.`,
+        keyPoints: [
+          `Average youth unemployment at ${bayUnemp.toFixed(1)}% across BAY states`,
+          `Total SMEs: ${fmt(all.totalSMEs)} — growth potential in stable zones`,
+          `${fmt(all.totalDisplacement)} displaced persons affecting youth participation`,
+          `Literacy averaging ${all.avgLiteracy.toFixed(1)}% — digital skills gap widening`,
+        ],
+        recommendations: [
+          'Scale vocational training centers in each LGA',
+          'Launch digital skills initiative targeting rural communities',
+          'Create youth enterprise fund with micro-loan access',
+          'Partner with private sector for apprenticeship programs',
+        ],
+      },
+      {
+        id: '3',
+        title: 'Education Gap Analysis — Yobe Focus',
+        severity: 'medium',
+        status: 'Published',
+        summary: `Assessment of educational disparities in Yobe State across ${yobe.totalLGAs} LGAs, with literacy at ${yobe.avgLiteracy.toFixed(1)}% and unemployment at ${yobeUnemp.toFixed(1)}%.`,
+        keyPoints: [
+          `Literacy rate at ${yobe.avgLiteracy.toFixed(1)}% across ${yobe.totalLGAs} LGAs`,
+          `${fmt(yobe.totalDisplacement)} displaced persons affecting school access`,
+          `${fmt(yobe.totalConflict)} conflict incidents impacting infrastructure`,
+          `Unemployment at ${yobeUnemp.toFixed(1)}% — highest among BAY youth`,
+        ],
+        recommendations: [
+          'Prioritize school reconstruction in conflict-affected areas',
+          'Implement community-based education for displaced children',
+          'Increase teacher recruitment with conflict-zone incentives',
+          'Deploy mobile learning solutions for remote communities',
+        ],
+      },
+    ];
+  }, [allRows]);
 
   const handleShare = async (brief: PolicyBrief) => {
     try {
       await Share.share({
         title: brief.title,
-        message: `${brief.title}\n\n${brief.summary}\n\nKey Points:\n${brief.keyPoints.map((p) => `- ${p}`).join('\n')}\n\nRecommendations:\n${brief.recommendations.map((r) => `- ${r}`).join('\n')}\n\n-- HUMAID BAY States Intelligence`,
+        message: `${brief.title}\n\n${brief.summary}\n\nKey Points:\n${brief.keyPoints.map(p => `- ${p}`).join('\n')}\n\nRecommendations:\n${brief.recommendations.map(r => `- ${r}`).join('\n')}\n\n-- HUMAID BAY States Intelligence`,
       });
     } catch {}
   };
 
+  if (loading) {
+    return <View style={styles.center}><ActivityIndicator size="large" color="#f4b942" /></View>;
+  }
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor="#f4b942" />}>
+
       <Text style={styles.intro}>
-        Auto-generated policy recommendations based on BAY States humanitarian data analysis.
+        Auto-generated policy recommendations based on {allRows.length} data points across the BAY States.
       </Text>
 
-      {BRIEFS.map((brief) => {
+      {briefs.map((brief) => {
         const isExp = expanded === brief.id;
         const sc = sevColors[brief.severity];
 
@@ -155,6 +193,7 @@ export default function BriefsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0a0f' },
+  center: { flex: 1, backgroundColor: '#0a0a0f', justifyContent: 'center', alignItems: 'center' },
   intro: { color: '#94a3b8', fontSize: 14, lineHeight: 20, padding: 16, paddingBottom: 8 },
 
   briefCard: {

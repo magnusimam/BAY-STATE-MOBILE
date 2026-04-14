@@ -3,7 +3,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
 
 function TabIcon(props: { name: React.ComponentProps<typeof FontAwesome>['name']; color: string }) {
-  return <FontAwesome size={21} style={{ marginBottom: -2 }} {...props} />;
+  return <FontAwesome size={19} style={{ marginBottom: -2 }} {...props} />;
 }
 
 export default function TabLayout() {
@@ -18,6 +18,7 @@ export default function TabLayout() {
           paddingBottom: 4,
           height: 58,
         },
+        tabBarLabelStyle: { fontSize: 10 },
         headerStyle: { backgroundColor: '#0a0a0f' },
         headerTintColor: '#f5f5f5',
         headerTitleStyle: { fontWeight: '700' },
@@ -26,7 +27,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
+          title: 'Home',
           tabBarIcon: ({ color }) => <TabIcon name="dashboard" color={color} />,
           headerTitle: 'HUMAID',
           headerTitleStyle: { fontWeight: '800', fontSize: 18, color: '#f4b942' },
@@ -38,6 +39,22 @@ export default function TabLayout() {
           title: 'States',
           tabBarIcon: ({ color }) => <TabIcon name="map-marker" color={color} />,
           headerTitle: 'BAY States',
+        }}
+      />
+      <Tabs.Screen
+        name="analysis"
+        options={{
+          title: 'Analysis',
+          tabBarIcon: ({ color }) => <TabIcon name="lightbulb-o" color={color} />,
+          headerTitle: 'AI Analysis',
+        }}
+      />
+      <Tabs.Screen
+        name="compare"
+        options={{
+          title: 'Compare',
+          tabBarIcon: ({ color }) => <TabIcon name="columns" color={color} />,
+          headerTitle: 'Compare States',
         }}
       />
       <Tabs.Screen

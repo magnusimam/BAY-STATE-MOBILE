@@ -97,6 +97,32 @@ export default function TrendsScreen() {
         ))}
       </ScrollView>
 
+      {/* KPI Summary Cards */}
+      <View style={styles.kpiRow}>
+        <View style={styles.kpiMini}>
+          <Text style={styles.kpiMiniValue}>{allRows.length}</Text>
+          <Text style={styles.kpiMiniLabel}>Total Tracked</Text>
+        </View>
+        <View style={styles.kpiMini}>
+          <Text style={[styles.kpiMiniValue, { color: '#22c55e' }]}>
+            {allRows.filter(r => r.trend?.toLowerCase().includes('improv')).length}
+          </Text>
+          <Text style={styles.kpiMiniLabel}>Improving</Text>
+        </View>
+        <View style={styles.kpiMini}>
+          <Text style={[styles.kpiMiniValue, { color: '#ef4444' }]}>
+            {allRows.filter(r => r.trend?.toLowerCase().includes('declin')).length}
+          </Text>
+          <Text style={styles.kpiMiniLabel}>Declining</Text>
+        </View>
+        <View style={styles.kpiMini}>
+          <Text style={[styles.kpiMiniValue, { color: '#94a3b8' }]}>
+            {allRows.filter(r => !r.trend?.toLowerCase().includes('improv') && !r.trend?.toLowerCase().includes('declin')).length}
+          </Text>
+          <Text style={styles.kpiMiniLabel}>Stable</Text>
+        </View>
+      </View>
+
       {/* Tab: All / Improvers / Decliners */}
       <View style={styles.tabs}>
         {(['all', 'improvers', 'decliners'] as Tab[]).map((t) => (
@@ -199,6 +225,14 @@ const styles = StyleSheet.create({
   indicatorActive: { backgroundColor: 'rgba(244,185,66,0.15)', borderColor: 'rgba(244,185,66,0.3)' },
   indicatorText: { fontSize: 12, color: '#94a3b8' },
   indicatorTextActive: { color: '#f4b942' },
+
+  kpiRow: { flexDirection: 'row', paddingHorizontal: 12, marginBottom: 12, gap: 4 },
+  kpiMini: {
+    flex: 1, borderRadius: 10, padding: 10, alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1,
+  },
+  kpiMiniValue: { color: '#f5f5f5', fontSize: 20, fontWeight: '800' },
+  kpiMiniLabel: { color: '#64748b', fontSize: 9, marginTop: 2, fontWeight: '600' },
 
   tabs: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 3 },
   tab: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
