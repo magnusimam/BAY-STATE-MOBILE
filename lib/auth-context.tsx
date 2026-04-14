@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import Constants from 'expo-constants';
 import {
   User,
   onAuthStateChanged,
@@ -12,16 +13,9 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Alert } from 'react-native';
-import {
-  GoogleSignin,
-  isSuccessResponse,
-} from '@react-native-google-signin/google-signin';
 
-// Configure Google Sign-In with your Firebase web client ID
-// Get this from: Firebase Console → Authentication → Sign-in method → Google → Web client ID
-GoogleSignin.configure({
-  webClientId: '525728563081-REPLACE_WITH_YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
-});
+// Detect if we're in Expo Go (no native modules available)
+const isExpoGo = Constants.executionEnvironment === 'storeClient';
 
 interface AuthContextType {
   user: User | null;
@@ -48,6 +42,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
     return () => unsubscribe();
+  }, []);
+
+  // Configure Google Sign-In only outside Expo Go (native build required)
+  useEffect(() => {
+    if (isExpoGo) return;
+    (async () => {
+      try {
+        const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
+        GoogleSignin.configure({
+          webClientId: '525728563081-REPLACE_WITH_YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+        });
+      } catch (err) {
+        console.warn('Google Sign-In setup failed:', err);
+      }
+    })();
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -84,8 +93,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       setError(null);
-      // Sign out from both Firebase and Google
-      try { await GoogleSignin.signOut(); } catch {}
+      if (!isExpoGo) {
+        try {
+          const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
+          await GoogleSignin.signOut();
+        } catch {}
+      }
       await firebaseSignOut(auth);
     } catch (err: any) {
       setError(getErrorMessage(err.code));
@@ -93,32 +106,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
+    if (isExpoGo) {
+      Alert.alert(
+        'Google Sign-In Unavailable',
+        'Google sign-in requires a production build. Please use email/password in Expo Go, or build the app with EAS to enable Google sign-in.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     try {
       setError(null);
       setLoading(true);
 
-      // Check if Google Play Services are available (Android)
-      await GoogleSignin.hasPlayServices();
+      const mod = await import('@react-native-google-signin/google-signin');
+      const { GoogleSignin, isSuccessResponse } = mod;
 
-      // Trigger Google sign-in
+      await GoogleSignin.hasPlayServices();
       const response = await GoogleSignin.signIn();
 
       if (isSuccessResponse(response)) {
         const { idToken } = response.data;
         if (!idToken) throw new Error('No ID token returned from Google');
-
-        // Create Firebase credential and sign in
         const credential = GoogleAuthProvider.credential(idToken);
         await signInWithCredential(auth, credential);
       }
     } catch (err: any) {
-      // Don't show error if user cancelled
       if (err.code === 'SIGN_IN_CANCELLED' || err.code === '12501') {
         setLoading(false);
         return;
       }
-      const message = err.message || 'Google sign-in failed. Please try again.';
-      setError(message);
+      setError(err.message || 'Google sign-in failed. Please try again.');
     } finally {
       setLoading(false);
     }
