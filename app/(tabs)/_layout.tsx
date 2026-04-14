@@ -1,38 +1,35 @@
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
 
 function TabIcon(props: { name: React.ComponentProps<typeof FontAwesome>['name']; color: string }) {
-  return <FontAwesome size={22} style={{ marginBottom: -2 }} {...props} />;
+  return <FontAwesome size={21} style={{ marginBottom: -2 }} {...props} />;
 }
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const colors = Colors[colorScheme];
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.tabIconDefault,
+        tabBarActiveTintColor: '#f4b942',
+        tabBarInactiveTintColor: '#64748b',
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
+          backgroundColor: '#141419',
+          borderTopColor: 'rgba(255,255,255,0.08)',
           paddingBottom: 4,
-          height: 60,
+          height: 58,
         },
-        headerStyle: { backgroundColor: colors.surface },
-        headerTintColor: colors.text,
+        headerStyle: { backgroundColor: '#0a0a0f' },
+        headerTintColor: '#f5f5f5',
         headerTitleStyle: { fontWeight: '700' },
+        headerShadowVisible: false,
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ color }) => <TabIcon name="dashboard" color={color} />,
-          headerTitle: 'HUMAID Dashboard',
+          headerTitle: 'HUMAID',
+          headerTitleStyle: { fontWeight: '800', fontSize: 18, color: '#f4b942' },
         }}
       />
       <Tabs.Screen
@@ -40,6 +37,7 @@ export default function TabLayout() {
         options={{
           title: 'States',
           tabBarIcon: ({ color }) => <TabIcon name="map-marker" color={color} />,
+          headerTitle: 'BAY States',
         }}
       />
       <Tabs.Screen
@@ -47,6 +45,7 @@ export default function TabLayout() {
         options={{
           title: 'Trends',
           tabBarIcon: ({ color }) => <TabIcon name="line-chart" color={color} />,
+          headerTitle: 'Trend Analysis',
         }}
       />
       <Tabs.Screen
@@ -62,6 +61,7 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => <TabIcon name="user-circle-o" color={color} />,
+          headerShown: false,
         }}
       />
     </Tabs>

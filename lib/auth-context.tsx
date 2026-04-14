@@ -7,8 +7,14 @@ import {
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
   updateProfile,
+  GoogleAuthProvider,
+  signInWithCredential,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+
+WebBrowser.maybeCompleteAuthSession();
 
 interface AuthContextType {
   user: User | null;
@@ -17,6 +23,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName?: string) => Promise<void>;
   signOut: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   clearError: () => void;
 }
@@ -28,6 +35,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Google auth session
+  const [, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
+    webClientId: '525728563081-REPLACE_WITH_WEB_CLIENT_ID.apps.googleusercontent.com',
+    iosClientId: undefined, // Add when you have iOS OAuth client
+    androidClientId: undefined, // Add when you have Android OAuth client
+  });
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
@@ -35,6 +49,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     return () => unsubscribe();
   }, []);
+
+  // Handle Google auth response
+  useEffect(() => {
+    if (googleResponse?.type === 'success') {
+      const { id_token } = googleResponse.params;
+      const credential = GoogleAuthProvider.credential(id_token);
+      setLoading(true);
+      signInWithCredential(auth, credential)
+        .catch((err: any) => setError(getErrorMessage(err.code)))
+        .finally(() => setLoading(false));
+    }
+  }, [googleResponse]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -72,8 +98,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       await firebaseSignOut(auth);
     } catch (err: any) {
-      const message = getErrorMessage(err.code);
-      setError(message);
+      setError(getErrorMessage(err.code));
+    }
+  };
+
+  const signInWithGoogleHandler = async () => {
+    try {
+      setError(null);
+      await promptGoogleAsync();
+    } catch (err: any) {
+      setError(err.message || 'Google sign-in failed');
     }
   };
 
@@ -92,7 +126,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, error, signIn, signUp, signOut, resetPassword, clearError }}>
+      value={{
+        user,
+        loading,
+        error,
+        signIn,
+        signUp,
+        signOut,
+        signInWithGoogle: signInWithGoogleHandler,
+        resetPassword,
+        clearError,
+      }}>
       {children}
     </AuthContext.Provider>
   );
@@ -121,6 +165,8 @@ function getErrorMessage(errorCode: string): string {
       return 'Invalid email or password. Please try again.';
     case 'auth/too-many-requests':
       return 'Too many failed attempts. Please try again later.';
+    case 'auth/popup-closed-by-user':
+      return 'Sign-in was cancelled.';
     default:
       return 'An error occurred. Please try again.';
   }
