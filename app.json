@@ -23,7 +23,8 @@
         "backgroundColor": "#f4b942"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.baystates.humaid"
+      "package": "com.baystates.humaid",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -35,6 +36,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "095e9bb4-1575-413e-8114-54a7f757e112"
+      }
+    },
+    "owner": "magnusimam1"
   }
 }

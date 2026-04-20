@@ -13,6 +13,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Alert } from 'react-native';
+import { GOOGLE_WEB_CLIENT_ID, isGoogleSignInConfigured } from '@/constants/Config';
 
 // Detect if we're in Expo Go (no native modules available)
 const isExpoGo = Constants.executionEnvironment === 'storeClient';
@@ -47,12 +48,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Configure Google Sign-In only outside Expo Go (native build required)
   useEffect(() => {
     if (isExpoGo) return;
+    if (!isGoogleSignInConfigured) {
+      console.warn('Google Sign-In not configured: set GOOGLE_WEB_CLIENT_ID in constants/Config.ts');
+      return;
+    }
     (async () => {
       try {
         const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
-        GoogleSignin.configure({
-          webClientId: '525728563081-REPLACE_WITH_YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
-        });
+        GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
       } catch (err) {
         console.warn('Google Sign-In setup failed:', err);
       }
@@ -110,6 +113,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       Alert.alert(
         'Google Sign-In Unavailable',
         'Google sign-in requires a production build. Please use email/password in Expo Go, or build the app with EAS to enable Google sign-in.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    if (!isGoogleSignInConfigured) {
+      Alert.alert(
+        'Google Sign-In Not Configured',
+        'The Web Client ID has not been set. Please use email/password, or contact the app administrator.',
         [{ text: 'OK' }]
       );
       return;

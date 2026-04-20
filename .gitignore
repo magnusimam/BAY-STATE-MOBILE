@@ -33,6 +33,10 @@ yarn-error.*
 # local env files
 .env*.local
 
+# Firebase native config — committed so EAS Build can find it.
+# Android API key inside is restricted by package name + SHA-1, safe to commit.
+# For iOS, GoogleService-Info.plist is similarly safe.
+
 # typescript
 *.tsbuildinfo
 

@@ -11,6 +11,15 @@ export const FIREBASE_CONFIG = {
   appId: '1:525728563081:web:062fa1b6d6c526be276b58',
 };
 
+// Google Sign-In OAuth Web Client ID.
+// Fetch from: Firebase Console -> Project Settings -> Your apps -> (web app) -> Web SDK configuration
+// OR: Google Cloud Console -> APIs & Services -> Credentials -> OAuth 2.0 Client IDs -> "Web client (auto created by Google Service)"
+// Format: {messagingSenderId}-{hash}.apps.googleusercontent.com
+// Leave as the placeholder below to disable native Google Sign-In at runtime.
+export const GOOGLE_WEB_CLIENT_ID = '525728563081-fd14dntouikotme4gvsc8ntrpuv1hjst.apps.googleusercontent.com';
+
+export const isGoogleSignInConfigured = !GOOGLE_WEB_CLIENT_ID.includes('REPLACE_WITH_YOUR_WEB_CLIENT_ID');
+
 // Admin emails
 export const ADMIN_EMAILS = ['imammagnus40@gmail.com'];
 
