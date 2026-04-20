@@ -9,6 +9,8 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { BrandSplash } from '@/components/BrandSplash';
+import { SidebarProvider } from '@/lib/sidebar-context';
+import { Sidebar } from '@/components/Sidebar';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -60,8 +62,11 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
-        <ProtectedRoutes />
-        {!splashDone && <BrandSplash onDone={() => setSplashDone(true)} />}
+        <SidebarProvider>
+          <ProtectedRoutes />
+          <Sidebar />
+          {!splashDone && <BrandSplash onDone={() => setSplashDone(true)} />}
+        </SidebarProvider>
       </AuthProvider>
     </ThemeProvider>
   );
