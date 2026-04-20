@@ -7,3 +7,7 @@ export { EmptyState } from './EmptyState';
 export { AnimatedCounter } from './AnimatedCounter';
 export { FadeInView } from './FadeInView';
 export { MaterializeView } from './MaterializeView';
+export { LivePulse } from './LivePulse';
+export { Sparkline } from './Sparkline';
+export { BreathingGlow } from './BreathingGlow';
+export { TrendPulseCard } from './TrendPulseCard';

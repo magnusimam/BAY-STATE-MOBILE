@@ -10,7 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { api, computeSummary, filterByState, fmt } from '@/lib/api';
 import { MasterRow } from '@/lib/api-types';
 import { spacing, radius, background, brand, elevation, semantic } from '@/constants/Tokens';
-import { Card, Text, Badge, EmptyState, SkeletonKPI, SkeletonRow, AnimatedCounter, MaterializeView } from '@/components/ui';
+import { Card, Text, Badge, EmptyState, SkeletonKPI, SkeletonRow, AnimatedCounter, MaterializeView, LivePulse, Sparkline, BreathingGlow } from '@/components/ui';
 import { stateColor } from '@/constants/Tokens';
 
 const { width: SW } = Dimensions.get('window');
@@ -46,13 +46,26 @@ export default function DashboardScreen() {
   const adamawaSummary = computeSummary(adamawaRows);
   const yobeSummary = computeSummary(yobeRows);
 
+  const yearSeries = (needle: string): number[] => {
+    const matched = allRows.filter((r) =>
+      r.indicator?.toLowerCase().includes(needle.toLowerCase()),
+    );
+    if (matched.length === 0) return [];
+    return [
+      matched.reduce((s, r) => s + (Number(r.y2022) || 0), 0),
+      matched.reduce((s, r) => s + (Number(r.y2023) || 0), 0),
+      matched.reduce((s, r) => s + (Number(r.y2024) || 0), 0),
+      matched.reduce((s, r) => s + (Number(r.y2025) || 0), 0),
+    ];
+  };
+
   const kpis = [
-    { label: 'Total Displaced', value: allSummary.totalDisplacement, color: stateColor.borno, format: fmt },
-    { label: 'Conflict Incidents', value: allSummary.totalConflict, color: semantic.danger, format: fmt },
-    { label: 'Borno LGAs', value: bornoSummary.totalLGAs, color: stateColor.borno, format: (n: number) => n.toString() },
-    { label: 'Adamawa LGAs', value: adamawaSummary.totalLGAs, color: stateColor.adamawa, format: (n: number) => n.toString() },
-    { label: 'Yobe LGAs', value: yobeSummary.totalLGAs, color: stateColor.yobe, format: (n: number) => n.toString() },
-    { label: 'Total SMEs', value: allSummary.totalSMEs, color: semantic.success, format: fmt },
+    { label: 'Total Displaced', value: allSummary.totalDisplacement, color: stateColor.borno, format: fmt, series: yearSeries('displac') },
+    { label: 'Conflict Incidents', value: allSummary.totalConflict, color: semantic.danger, format: fmt, series: yearSeries('conflict') },
+    { label: 'Borno LGAs', value: bornoSummary.totalLGAs, color: stateColor.borno, format: (n: number) => n.toString(), series: [] as number[] },
+    { label: 'Adamawa LGAs', value: adamawaSummary.totalLGAs, color: stateColor.adamawa, format: (n: number) => n.toString(), series: [] as number[] },
+    { label: 'Yobe LGAs', value: yobeSummary.totalLGAs, color: stateColor.yobe, format: (n: number) => n.toString(), series: [] as number[] },
+    { label: 'Total SMEs', value: allSummary.totalSMEs, color: semantic.success, format: fmt, series: yearSeries('SME') },
   ];
 
   const topImprovers = allRows
@@ -66,20 +79,38 @@ export default function DashboardScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor={brand.amber} />}>
 
       {/* Hero banner */}
-      <MaterializeView delay={0} dotCount={14}>
-        <LinearGradient
-          colors={[brand.amberLight, brand.amber, brand.amberDark]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.banner}>
-          <Text variant="h2" color="#fff" style={{ letterSpacing: -0.5 }}>
-            BAY States Intelligence
-          </Text>
-          <Text variant="bodySm" color="rgba(255,255,255,0.9)" style={{ marginTop: spacing.xs }}>
-            {loading ? 'Loading data...' : `${allRows.length} data points across ${new Set(allRows.map(r => r.lga)).size} LGAs`}
-          </Text>
-        </LinearGradient>
-      </MaterializeView>
+      <View style={styles.bannerWrap}>
+        <BreathingGlow
+          size={280}
+          color={brand.amber}
+          style={{ top: -100, left: -40 }}
+        />
+        <BreathingGlow
+          size={220}
+          color={brand.amberLight}
+          period={4200}
+          style={{ top: -40, right: -60 }}
+        />
+        <MaterializeView delay={0} dotCount={14}>
+          <LinearGradient
+            colors={[brand.amberLight, brand.amber, brand.amberDark]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.banner}>
+            <View style={styles.bannerTop}>
+              <Text variant="h2" color="#fff" style={{ letterSpacing: -0.5, flex: 1 }}>
+                BAY States Intelligence
+              </Text>
+              <View style={styles.liveChip}>
+                <LivePulse label="LIVE" size={7} />
+              </View>
+            </View>
+            <Text variant="bodySm" color="rgba(255,255,255,0.92)" style={{ marginTop: spacing.xs }}>
+              {loading ? 'Streaming data…' : `${allRows.length} data points · ${new Set(allRows.map(r => r.lga)).size} LGAs tracked`}
+            </Text>
+          </LinearGradient>
+        </MaterializeView>
+      </View>
 
       {error && (
         <View style={styles.errorBox}>
@@ -98,20 +129,37 @@ export default function DashboardScreen() {
               </View>
             ))
           ) : (
-            kpis.map((kpi, i) => (
-              <View key={i} style={{ width: CARD_W, margin: spacing.xs / 2 }}>
-                <Card level={2} padding="lg" accentColor={kpi.color} accentPosition="top">
-                  <Text variant="caption" color="tertiary">{kpi.label}</Text>
-                  <AnimatedCounter
-                    value={kpi.value}
-                    format={kpi.format}
-                    variant="numLg"
-                    color="primary"
-                    style={{ marginTop: spacing.xs }}
-                  />
-                </Card>
-              </View>
-            ))
+            kpis.map((kpi, i) => {
+              const hasSeries = kpi.series.length >= 2 && new Set(kpi.series).size > 1;
+              const trendUp = hasSeries && kpi.series[kpi.series.length - 1] >= kpi.series[0];
+              return (
+                <View key={i} style={{ width: CARD_W, margin: spacing.xs / 2 }}>
+                  <Card level={2} padding="lg" accentColor={kpi.color} accentPosition="top">
+                    <Text variant="caption" color="tertiary">{kpi.label}</Text>
+                    <AnimatedCounter
+                      value={kpi.value}
+                      format={kpi.format}
+                      variant="numLg"
+                      color="primary"
+                      style={{ marginTop: spacing.xs }}
+                    />
+                    <View style={{ marginTop: spacing.sm, minHeight: 28 }}>
+                      {hasSeries ? (
+                        <Sparkline
+                          data={kpi.series}
+                          width={CARD_W - spacing.lg * 2}
+                          height={28}
+                          color={trendUp ? semantic.success : semantic.danger}
+                          delay={300 + i * 90}
+                        />
+                      ) : (
+                        <Text variant="caption" color="muted">— steady —</Text>
+                      )}
+                    </View>
+                  </Card>
+                </View>
+              );
+            })
           )}
         </View>
       </MaterializeView>
@@ -195,11 +243,21 @@ function MetricCell({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: background.primary },
 
+  bannerWrap: { position: 'relative', overflow: 'hidden' },
   banner: {
     padding: spacing.xxl,
     paddingTop: spacing.md,
     borderBottomLeftRadius: radius.xxl,
     borderBottomRightRadius: radius.xxl,
+  },
+  bannerTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  liveChip: {
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
 
   errorBox: {

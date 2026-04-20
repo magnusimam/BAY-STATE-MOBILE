@@ -10,7 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { api, filterByState, fmt, getUniqueIndicators } from '@/lib/api';
 import { MasterRow } from '@/lib/api-types';
 import { spacing, radius, background, elevation, stateColor, brand, semantic, textColor } from '@/constants/Tokens';
-import { Card, Text, Badge, EmptyState, SkeletonRow } from '@/components/ui';
+import { Card, Text, Badge, EmptyState, SkeletonRow, TrendPulseCard, Sparkline } from '@/components/ui';
 
 type Tab = 'all' | 'improvers' | 'decliners';
 
@@ -131,42 +131,61 @@ export default function TrendsScreen() {
         sorted.slice(0, 30).map((row) => {
           const isUp = row.change_pct > 0;
           const sc = stateColor[row.state.toLowerCase() as keyof typeof stateColor] || semantic.info;
+          const series = [row.y2022, row.y2023, row.y2024, row.y2025].map((v) => Number(v) || 0);
+          const hasSparkVariance = new Set(series).size > 1;
           return (
-            <Card key={row.id} level={2} padding="md" style={styles.trendCard}>
-              <View style={styles.trendTop}>
-                <View style={{ flex: 1 }}>
-                  <Text variant="h4" color="primary">{row.lga}</Text>
-                  <Text variant="caption" color="tertiary" style={{ marginTop: 2 }}>
-                    {row.indicator}
-                  </Text>
+            <TrendPulseCard
+              key={row.id}
+              direction={row.change_pct > 0 ? 'up' : row.change_pct < 0 ? 'down' : 'neutral'}
+              style={styles.trendCard}
+            >
+              <Card level={2} padding="md">
+                <View style={styles.trendTop}>
+                  <View style={{ flex: 1 }}>
+                    <Text variant="h4" color="primary">{row.lga}</Text>
+                    <Text variant="caption" color="tertiary" style={{ marginTop: 2 }}>
+                      {row.indicator}
+                    </Text>
+                  </View>
+                  <Badge label={row.state} color={sc} size="sm" />
                 </View>
-                <Badge label={row.state} color={sc} size="sm" />
-              </View>
 
-              <View style={styles.yearRow}>
-                <YearVal label="2022" value={row.y2022} />
-                <Text variant="caption" color="muted">→</Text>
-                <YearVal label="2023" value={row.y2023} />
-                <Text variant="caption" color="muted">→</Text>
-                <YearVal label="2024" value={row.y2024} />
-                <Text variant="caption" color="muted">→</Text>
-                <YearVal label="2025" value={row.y2025} highlight />
-              </View>
-
-              <View style={styles.trendBottom}>
-                <Text variant="numSm" color={isUp ? semantic.success : semantic.danger}>
-                  {isUp ? '+' : ''}{row.change_pct.toFixed(1)}% (4yr)
-                </Text>
-                {row.trend ? (
-                  <Badge
-                    label={row.trend}
-                    color={row.trend.toLowerCase().includes('improv') ? semantic.success :
-                      row.trend.toLowerCase().includes('declin') ? semantic.danger : textColor.tertiary}
-                    size="sm"
-                  />
+                {hasSparkVariance ? (
+                  <View style={{ marginBottom: spacing.sm, alignItems: 'stretch' }}>
+                    <Sparkline
+                      data={series}
+                      width={320}
+                      height={32}
+                      color={isUp ? semantic.success : semantic.danger}
+                    />
+                  </View>
                 ) : null}
-              </View>
-            </Card>
+
+                <View style={styles.yearRow}>
+                  <YearVal label="2022" value={row.y2022} />
+                  <Text variant="caption" color="muted">→</Text>
+                  <YearVal label="2023" value={row.y2023} />
+                  <Text variant="caption" color="muted">→</Text>
+                  <YearVal label="2024" value={row.y2024} />
+                  <Text variant="caption" color="muted">→</Text>
+                  <YearVal label="2025" value={row.y2025} highlight />
+                </View>
+
+                <View style={styles.trendBottom}>
+                  <Text variant="numSm" color={isUp ? semantic.success : semantic.danger}>
+                    {isUp ? '▲ +' : '▼ '}{row.change_pct.toFixed(1)}% (4yr)
+                  </Text>
+                  {row.trend ? (
+                    <Badge
+                      label={row.trend}
+                      color={row.trend.toLowerCase().includes('improv') ? semantic.success :
+                        row.trend.toLowerCase().includes('declin') ? semantic.danger : textColor.tertiary}
+                      size="sm"
+                    />
+                  ) : null}
+                </View>
+              </Card>
+            </TrendPulseCard>
           );
         })
       )}

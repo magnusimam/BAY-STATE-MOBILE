@@ -1,6 +1,16 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleProp, ViewStyle } from 'react-native';
-import { radius, timing } from '@/constants/Tokens';
+import React, { useEffect } from 'react';
+import { View, StyleSheet, StyleProp, ViewStyle, Dimensions } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { radius } from '@/constants/Tokens';
+
+const { width: SW } = Dimensions.get('window');
 
 interface SkeletonProps {
   width?: number | string;
@@ -9,52 +19,69 @@ interface SkeletonProps {
   style?: StyleProp<ViewStyle>;
 }
 
-export function Skeleton({ width = '100%', height = 20, radiusSize = 'sm', style }: SkeletonProps) {
-  const opacity = useRef(new Animated.Value(0.4)).current;
+// Shimmer skeleton: a diagonal highlight sweeps across a dim base on loop.
+// Reads as "loading, content coming soon" far more clearly than a plain pulse.
+export function Skeleton({
+  width = '100%',
+  height = 20,
+  radiusSize = 'sm',
+  style,
+}: SkeletonProps) {
+  const x = useSharedValue(-1);
 
   useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, {
-          toValue: 0.8,
-          duration: timing.slower,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0.4,
-          duration: timing.slower,
-          useNativeDriver: true,
-        }),
-      ])
+    x.value = withRepeat(
+      withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      false,
     );
-    loop.start();
-    return () => loop.stop();
-  }, [opacity]);
+  }, []);
+
+  const sweepStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: x.value * SW }],
+  }));
 
   return (
-    <Animated.View
+    <View
       style={[
+        styles.base,
         {
           width: width as any,
           height: height as any,
           borderRadius: radius[radiusSize],
-          backgroundColor: 'rgba(255,255,255,0.08)',
-          opacity,
         },
         style,
       ]}
-    />
+    >
+      <Animated.View style={[StyleSheet.absoluteFill, sweepStyle]}>
+        <LinearGradient
+          colors={[
+            'rgba(255,255,255,0)',
+            'rgba(255,255,255,0.12)',
+            'rgba(255,255,255,0)',
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+    </View>
   );
 }
 
-// Preset: KPI card skeleton
 export function SkeletonKPI() {
   return (
-    <View style={{
-      flex: 1, margin: 4, padding: 16,
-      backgroundColor: 'rgba(255,255,255,0.03)',
-      borderRadius: radius.lg, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-    }}>
+    <View
+      style={{
+        flex: 1,
+        margin: 4,
+        padding: 16,
+        backgroundColor: 'rgba(255,255,255,0.03)',
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.06)',
+      }}
+    >
       <Skeleton width="60%" height={12} style={{ marginBottom: 8 }} />
       <Skeleton width="80%" height={24} style={{ marginBottom: 6 }} />
       <Skeleton width="40%" height={10} />
@@ -62,15 +89,26 @@ export function SkeletonKPI() {
   );
 }
 
-// Preset: List card skeleton
 export function SkeletonRow() {
   return (
-    <View style={{
-      marginHorizontal: 16, marginBottom: 10, padding: 14,
-      backgroundColor: 'rgba(255,255,255,0.03)',
-      borderRadius: radius.lg, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-    }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+    <View
+      style={{
+        marginHorizontal: 16,
+        marginBottom: 10,
+        padding: 14,
+        backgroundColor: 'rgba(255,255,255,0.03)',
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.06)',
+      }}
+    >
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          marginBottom: 8,
+        }}
+      >
         <Skeleton width="40%" height={16} />
         <Skeleton width={60} height={16} radiusSize="md" />
       </View>
@@ -83,3 +121,10 @@ export function SkeletonRow() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  base: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    overflow: 'hidden',
+  },
+});
