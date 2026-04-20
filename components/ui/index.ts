@@ -6,3 +6,4 @@ export { Skeleton, SkeletonKPI, SkeletonRow } from './Skeleton';
 export { EmptyState } from './EmptyState';
 export { AnimatedCounter } from './AnimatedCounter';
 export { FadeInView } from './FadeInView';
+export { MaterializeView } from './MaterializeView';

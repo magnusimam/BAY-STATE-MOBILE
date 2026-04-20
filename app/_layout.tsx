@@ -3,11 +3,12 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
+import { BrandSplash } from '@/components/BrandSplash';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -44,6 +45,7 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
   const colorScheme = useColorScheme();
+  const [splashDone, setSplashDone] = useState(false);
 
   useEffect(() => {
     if (error) throw error;
@@ -59,6 +61,7 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
         <ProtectedRoutes />
+        {!splashDone && <BrandSplash onDone={() => setSplashDone(true)} />}
       </AuthProvider>
     </ThemeProvider>
   );

@@ -10,7 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { api, computeSummary, filterByState, fmt } from '@/lib/api';
 import { MasterRow } from '@/lib/api-types';
 import { spacing, radius, background, brand, elevation, semantic } from '@/constants/Tokens';
-import { Card, Text, Badge, EmptyState, SkeletonKPI, SkeletonRow, AnimatedCounter } from '@/components/ui';
+import { Card, Text, Badge, EmptyState, SkeletonKPI, SkeletonRow, AnimatedCounter, MaterializeView } from '@/components/ui';
 import { stateColor } from '@/constants/Tokens';
 
 const { width: SW } = Dimensions.get('window');
@@ -66,18 +66,20 @@ export default function DashboardScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor={brand.amber} />}>
 
       {/* Hero banner */}
-      <LinearGradient
-        colors={[brand.amberLight, brand.amber, brand.amberDark]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.banner}>
-        <Text variant="h2" color="#fff" style={{ letterSpacing: -0.5 }}>
-          BAY States Intelligence
-        </Text>
-        <Text variant="bodySm" color="rgba(255,255,255,0.9)" style={{ marginTop: spacing.xs }}>
-          {loading ? 'Loading data...' : `${allRows.length} data points across ${new Set(allRows.map(r => r.lga)).size} LGAs`}
-        </Text>
-      </LinearGradient>
+      <MaterializeView delay={0} dotCount={14}>
+        <LinearGradient
+          colors={[brand.amberLight, brand.amber, brand.amberDark]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.banner}>
+          <Text variant="h2" color="#fff" style={{ letterSpacing: -0.5 }}>
+            BAY States Intelligence
+          </Text>
+          <Text variant="bodySm" color="rgba(255,255,255,0.9)" style={{ marginTop: spacing.xs }}>
+            {loading ? 'Loading data...' : `${allRows.length} data points across ${new Set(allRows.map(r => r.lga)).size} LGAs`}
+          </Text>
+        </LinearGradient>
+      </MaterializeView>
 
       {error && (
         <View style={styles.errorBox}>
@@ -87,30 +89,32 @@ export default function DashboardScreen() {
 
       {/* KPI Grid */}
       <Text variant="h3" color="primary" style={styles.sectionTitle}>Key Indicators</Text>
-      <View style={styles.kpiGrid}>
-        {loading ? (
-          [1, 2, 3, 4, 5, 6].map((i) => (
-            <View key={i} style={{ width: CARD_W, margin: spacing.xs / 2 }}>
-              <SkeletonKPI />
-            </View>
-          ))
-        ) : (
-          kpis.map((kpi, i) => (
-            <View key={i} style={{ width: CARD_W, margin: spacing.xs / 2 }}>
-              <Card level={2} padding="lg" accentColor={kpi.color} accentPosition="top">
-                <Text variant="caption" color="tertiary">{kpi.label}</Text>
-                <AnimatedCounter
-                  value={kpi.value}
-                  format={kpi.format}
-                  variant="numLg"
-                  color="primary"
-                  style={{ marginTop: spacing.xs }}
-                />
-              </Card>
-            </View>
-          ))
-        )}
-      </View>
+      <MaterializeView delay={200} dotCount={16}>
+        <View style={styles.kpiGrid}>
+          {loading ? (
+            [1, 2, 3, 4, 5, 6].map((i) => (
+              <View key={i} style={{ width: CARD_W, margin: spacing.xs / 2 }}>
+                <SkeletonKPI />
+              </View>
+            ))
+          ) : (
+            kpis.map((kpi, i) => (
+              <View key={i} style={{ width: CARD_W, margin: spacing.xs / 2 }}>
+                <Card level={2} padding="lg" accentColor={kpi.color} accentPosition="top">
+                  <Text variant="caption" color="tertiary">{kpi.label}</Text>
+                  <AnimatedCounter
+                    value={kpi.value}
+                    format={kpi.format}
+                    variant="numLg"
+                    color="primary"
+                    style={{ marginTop: spacing.xs }}
+                  />
+                </Card>
+              </View>
+            ))
+          )}
+        </View>
+      </MaterializeView>
 
       {/* State Overview */}
       <Text variant="h3" color="primary" style={styles.sectionTitle}>BAY States Overview</Text>
